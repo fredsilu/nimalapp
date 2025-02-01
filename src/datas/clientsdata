@@ -1,0 +1,5 @@
+const clients: Client[] = [
+    { nom: 'Dupont', prenom: 'Jean', numeroCompte: '123456', telephone1: '0123456789' },
+    { nom: 'Martin', prenom: 'Marie', numeroCompte: '654321', telephone1: '0987654321' },
+    { nom: 'Durand', prenom: 'Pierre', numeroCompte: '112233', telephone1: '0112233445' },
+];
