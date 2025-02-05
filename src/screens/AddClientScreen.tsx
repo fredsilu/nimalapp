@@ -27,7 +27,18 @@ const AddClientScreen = () => {
   const [loading, setLoading] = useState(false); // Ajout d'un état pour le chargement
 
   const handleAddClient = async () => {
-    setLoading(true);
+    if (!newClient.numeroCompte || !newClient.nom || !newClient.telephone1) {
+      Alert.alert('Erreur', 'Les champs "Numéro de compte", "Nom" et "Téléphone 1" ne peuvent pas être vides');
+      setLoading(false);
+      return;
+    }
+
+    if (newClient.numeroCompte.length < 3 || newClient.nom.length < 3 || newClient.telephone1.length < 3) {
+      Alert.alert('Erreur', 'Les champs "Numéro de compte", "Nom" et "Téléphone 1" doivent contenir au moins 3 caractères');
+      setLoading(false);
+      return;
+    }
+
     try {
       await api.createClient(newClient);
       Alert.alert('Succès', 'Client ajouté avec succès');

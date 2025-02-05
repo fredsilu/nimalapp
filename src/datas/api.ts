@@ -4,7 +4,7 @@ import { Alert } from 'react-native';
 import { Client, Operation } from '../types/types';
 
 
-const API_BASE_URL = 'http://192.168.1.70/nimale/api/'; // URL de votre API
+const API_BASE_URL = 'http://192.168.1.64/nimale/api/'; // URL de votre API
 
 
 const api = {
@@ -99,8 +99,13 @@ const api = {
     }
   },  
 
+  //on omet le id car le id de l'opération doit être créée par la base de données
   createOperation: async (operationData: Omit<Operation, 'id'>): Promise<Operation> => {
     try {
+      /*
+    INSERT INTO operations (clientId, typeOP, montant, dateOP, soldePrec,commission,soldeFinal)
+    VALUES (2, "depot", 200000, "2025-02-20T11:00:00.000Z", 0,0,200000);
+    */
       const response = await axios.post<Operation>(API_BASE_URL + 'operations', operationData);
       return response.data;
     } catch (error) {

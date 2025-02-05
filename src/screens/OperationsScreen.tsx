@@ -130,7 +130,7 @@ function OperationsScreen() {
                   style={[styles.itemRow, index % 2 === 0 ? styles.itemRowEven : styles.itemRowOdd]}
                   onPress={() => navigation.navigate('ModifOperationScreen', { id: item.id })}
                 >
-                  <Text style={styles.itemText}>{formaterDateSelonLocale(new Date(item.dateOP))} </Text>
+                  <Text style={styles.itemText}>{item.dateOP} </Text>
                   <Text style={styles.itemText}>{item.nom}</Text>
                   <Text style={styles.itemText}>{item.prenom}</Text>
                   <Text style={styles.itemText}>{item.telephone1}</Text>

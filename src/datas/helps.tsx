@@ -1,9 +1,19 @@
+import moment from "moment";
 
 interface FormatOptions {
     style: 'decimal' | 'percent' | 'currency';
     useGrouping: boolean;
     minimumFractionDigits: number;
     maximumFractionDigits: number;
+}
+
+interface DateFormatOptions {
+    year?: 'numeric' | '2-digit';
+    month?: 'numeric' | '2-digit' | 'narrow' | 'short' | 'long';
+    day?: 'numeric' | '2-digit';
+    hour?: 'numeric' | '2-digit';
+    minute?: 'numeric' | '2-digit';
+    second?: 'numeric' | '2-digit';
 }
 
 function formaterNombreSelonLocale(nombre: number): string {
@@ -28,35 +38,33 @@ export { formaterNombreSelonLocale };
 
 
 
-interface DateFormatOptions {
-    year?: 'numeric' | '2-digit';
-    month?: 'numeric' | '2-digit' | 'narrow' | 'short' | 'long';
-    day?: 'numeric' | '2-digit';
-    hour?: 'numeric' | '2-digit';
-    minute?: 'numeric' | '2-digit';
-    second?: 'numeric' | '2-digit';
-}
-
 function formaterDateSelonLocale(date: Date, options?: DateFormatOptions): string {
-    // Vérifier si l'argument est un objet Date valide
-    if (!(date instanceof Date)) {
-        return new Date('01/01/2025').toLocaleDateString();
-    }
 
-    // Options de formatage par défaut (si non fournies)
-    const defaultOptions: DateFormatOptions = {
-        day: 'numeric',
-        month: 'numeric',
-        year: 'numeric',
-        hour: 'numeric', // Ajout de l'heure
-        minute: 'numeric', // Ajout des minutes
-        second: 'numeric', // Ajout des secondes
-    };
-
-    // Fusionner les options fournies avec les options par défaut
-    const mergedOptions = { ...defaultOptions, ...options };
-
-    // Formater la date et l'heure selon la locale et les options
-    return date.toLocaleDateString(undefined, mergedOptions);
+    const current = moment(date, 'DD/MM/YYYY').format("DD/MM/YYYY");
+    return (current);
 }
 export { formaterDateSelonLocale };
+
+function formatDate(date: Date): string {
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+    const year = date.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+    return formattedDate;
+}
+export { formatDate };
+
+function formatDateLong(date: Date): string {
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return formattedDate;
+}
+export { formatDateLong };
+

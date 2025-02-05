@@ -5,71 +5,84 @@ import { Picker } from '@react-native-picker/picker';
 import { FontAwesome } from '@expo/vector-icons';
 import api from '../datas/api';
 import { Operation, CalculSoldesParams, RootStackParamList, Client } from '../types/types';
-import { StackNavigationProp, StackScreenProps } from '@react-navigation/stack';
-import { ParamListBase } from '@react-navigation/native';
-import { formaterDateSelonLocale } from '../datas/helps';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { formatDate, formatDateLong, formaterDateSelonLocale } from '../datas/helps';
 
 type Props = {
-    navigation: AddOperationScreenNavigationProp;
+    navigation: StackNavigationProp<RootStackParamList, 'AddOperation'>;
 };
 
-type AddOperationScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddOperation'>;
-
-const AddOperationScreen: React.FC<Props> = ({ navigation }: { navigation: AddOperationScreenNavigationProp }) => {
-
+const AddOperationScreen: React.FC<Props> = ({ navigation }) => {
     const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
     const [operationDatas, setOperationDatas] = useState<Operation>({
         id: 0,
-        clientId: '',  // modifiable mais mis en place sur base de la BDD
-        dateOP: new Date(), // automatique mais peux etre modifiée
-        soldePrec: 0, // doit provenir du solde de la transaction précédente
+        clientId: '',
+        dateOP: formatDateLong(new Date()),
+        soldePrec: 0,
         typeOP: 'depot',
         montant: 0,
         commission: 0,
-        soldeFinal: 0, // est calculé automatiquement
+        soldeFinal: 0,
     });
     const [soldeFinal, setSoldeFinal] = useState(0);
     const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(false);
-    const [valuM, setValuM  ] = useState<string>("");
+    const [valuM, setValuM] = useState<string>("");
+    const [valuCom, setValuCom] = useState<string>("");
+    const [dateOp, setDateOp] = useState<Date>(new Date());
+    
 
     useEffect(() => {
         const fetchClients = async () => {
             try {
                 const response = await api.fetchClients();
                 setClients(response);
-                //console.log('Clients récupérés', response);
             } catch (error) {
                 console.error('Erreur lors de la récupération des clients', error);
             }
         };
-
         fetchClients();
     }, []);
 
-    const calculSoldes = ({ commission, montant, typeOP }: CalculSoldesParams): void => {
+    const calculSoldes = ({ clientId, soldePrec, commission, montant, typeOP }: CalculSoldesParams): void => {
         montant = montant.replace(/[^0-9.]/g, "");
         commission = commission.replace(/[^0-9.]/g, "");
+
+        const montantNum = Number(montant);
+        const commissionNum = Number(commission);
+        const soldePrecNum = Number(soldePrec);
+
+        let sum = soldePrecNum;
         if (typeOP === 'depot') {
-            setSoldeFinal(Number(operationDatas.soldePrec) + Number(montant) - (Number(montant) * Number(commission) / 100));
+            sum += montantNum - (montantNum * commissionNum / 100);
         } else if (typeOP === 'retrait') {
-            setSoldeFinal(operationDatas.soldePrec - Number(montant) - (Number(montant) * Number(commission) / 100));
+            sum -= montantNum + (montantNum * commissionNum / 100);
+            if(sum < 0){
+                Alert.alert('Erreur', 'Solde insuffisant pour effectuer cette opération');
+                return;
+            }   
         }
-        setValuM(montant.toString());
-        setOperationDatas({ ...operationDatas, commission: Number(commission), soldeFinal, montant: Number(montant), typeOP });
+
+        setSoldeFinal(sum);
+        setValuM(montant);
+        setValuCom(commission);
+        setOperationDatas({ ...operationDatas, clientId, soldePrec: soldePrecNum, commission: commissionNum, soldeFinal: sum, montant: montantNum, typeOP });
     };
 
     const handleAddOperation = async () => {
         if (operationDatas.clientId === '' || operationDatas.montant === 0) {
-            Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+            Alert.alert('Erreur', 'Veuillez remplir les champs client et montant');
             return;
         }
-
         try {
             const { id, ...operationWithoutId } = operationDatas;
+            //console.log(operationWithoutId);
+            
             await api.createOperation(operationWithoutId);
             Alert.alert('Succès', 'Opération ajoutée avec succès');
-            navigation.goBack();
+            navigation.goBack(); // Retour à la page précédente
+            
+            
         } catch (error) {
             Alert.alert('Erreur', 'Une erreur est survenue lors de l\'ajout de l\'opération');
         }
@@ -78,25 +91,20 @@ const AddOperationScreen: React.FC<Props> = ({ navigation }: { navigation: AddOp
     const showDatePicker = () => {
         setIsDatePickerVisible(true);
     };
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#0000ff" />
-            </View>
-        );
-    }
 
-    const updateInfos = (clientId: string) => {// il faut récupérer le solde précédent du client
+    const updateInfos = (clientId: string) => {
         const fetchSoldePrecedent = async (clientId: string) => {
             setLoading(true);
             try {
                 const response = await api.fetchSoldePrecedent(clientId);
-                const t= (response[0].soldePrec);
-
                 if (response.length > 0) {
-                    setOperationDatas({ ...operationDatas, clientId, soldePrec:t });
+                    const soldePrec = response[0].soldeFinal;
+                    calculSoldes({ clientId, soldePrec, typeOP: operationDatas.typeOP, montant: operationDatas.montant.toString(), commission: operationDatas.commission.toString() });
                 } else {
                     Alert.alert("Erreur", "Aucun solde précédent trouvé pour ce client !");
+                    const soldePrec =0;
+                    calculSoldes({ clientId, soldePrec , typeOP: operationDatas.typeOP, montant: operationDatas.montant.toString(), commission: operationDatas.commission.toString() });
+               
                 }
             } catch (error) {
                 Alert.alert("Erreur", "Erreur lors de la récupération du solde précédent !");
@@ -106,19 +114,30 @@ const AddOperationScreen: React.FC<Props> = ({ navigation }: { navigation: AddOp
             }
         };
         fetchSoldePrecedent(clientId);
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#0000ff" />
+            </View>
+        );
     }
 
-    return (  
+    return (
         <View style={styles.container}>
             <Text style={styles.title}>Ajouter une Opération</Text>
             <ScrollView style={styles.scrollContainer}>
                 <View style={styles.inputContainer}>
-                    <FontAwesome name="user" size={24} color="black" />
+                    <FontAwesome name="user" size={30} color="#841584" />
+                    <Text style={[styles.input, { color: '#841584' }]}>Choisir le client:</Text>
+                </View>
+                <View style={styles.pickerContainer}>
                     <Picker
                         selectedValue={operationDatas.clientId}
-                        style={styles.input}
-                        onValueChange={(itemValue) => { updateInfos(itemValue)}}
-                    > 
+                        style={styles.picker}
+                        onValueChange={updateInfos}
+                    >
                         <Picker.Item label="Sélectionnez un client" value="" />
                         {clients.map((client) => (
                             <Picker.Item key={client.id} label={client.nom} value={client.id} />
@@ -127,20 +146,27 @@ const AddOperationScreen: React.FC<Props> = ({ navigation }: { navigation: AddOp
                 </View>
                 <View style={styles.inputContainer}>
                     <FontAwesome name="calendar" size={24} color="black" />
-                    <TouchableOpacity onPress={() => showDatePicker()} style={styles.buttonStyle}>
-                        <Text>{formaterDateSelonLocale(new Date(operationDatas.dateOP))}</Text>
+                    <TouchableOpacity onPress={showDatePicker}>
+                        <Text style={styles.input}>
+                        {formatDate(dateOp)}
+                        </Text>
                     </TouchableOpacity>
                     {isDatePickerVisible && (
                         <DateTimePicker
-                            value={new Date(operationDatas.dateOP)}
+                            value={dateOp}
                             mode="date"
                             display="default"
                             onChange={(event, selectedDate) => {
-                                const currentDate = selectedDate || operationDatas.dateOP;
                                 setIsDatePickerVisible(false);
-                                setOperationDatas({ ...operationDatas, dateOP: currentDate });
+                                if (selectedDate) {
+                                    const currentDate=formatDateLong(selectedDate);
+                                    setOperationDatas({ ...operationDatas, dateOP: currentDate});
+                                    setDateOp(selectedDate);
+                                    //console.log(currentDate, selectedDate);
+                                }else{
+                                    setDateOp(new Date());
+                                }
                             }}
-                            textColor="black" // Set text color to black
                         />
                     )}
                 </View>
@@ -156,7 +182,7 @@ const AddOperationScreen: React.FC<Props> = ({ navigation }: { navigation: AddOp
                         selectedValue={operationDatas.typeOP}
                         style={styles.input}
                         onValueChange={(itemValue) => {
-                            calculSoldes({ typeOP: itemValue, montant: operationDatas.montant.toString(), commission: operationDatas.commission.toString() });
+                            calculSoldes({ clientId: operationDatas.clientId, soldePrec: operationDatas.soldePrec, typeOP: itemValue, montant: operationDatas.montant.toString(), commission: operationDatas.commission.toString() });
                         }}
                     >
                         <Picker.Item label="Dépôt" value="depot" />
@@ -169,35 +195,31 @@ const AddOperationScreen: React.FC<Props> = ({ navigation }: { navigation: AddOp
                         style={styles.input}
                         placeholder="Montant"
                         keyboardType="numeric"
-                        inputMode="decimal" // Prend en charge les nombres décimaux proprement
-                        value={valuM }
-                        onChangeText={(text) => calculSoldes({ montant: text, commission: operationDatas.commission.toString(), typeOP: operationDatas.typeOP })}
+                        inputMode="decimal"
+                        value={valuM}
+                        onChangeText={(text) => calculSoldes({ clientId: operationDatas.clientId, soldePrec: operationDatas.soldePrec, montant: text, commission: operationDatas.commission.toString(), typeOP: operationDatas.typeOP })}
                     />
                 </View>
                 <View style={styles.inputContainer}>
-                    
+                    <FontAwesome name="dollar" size={24} color="black" />
                     <TextInput
                         style={styles.input}
                         placeholder="Commission"
-                       // keyboardType="default"
-                        value={operationDatas.commission.toString()}
+                        keyboardType="numeric"
+                        inputMode="decimal"
+                        value={valuCom}
                         onChangeText={(text) => {
-                            const sanitizedText = text.replace(/[^0-9.,]/g, '').replace(',', '.');
-                            calculSoldes({ commission: sanitizedText, montant: operationDatas.montant.toString(), typeOP: operationDatas.typeOP });
+                            calculSoldes({ clientId: operationDatas.clientId, soldePrec: operationDatas.soldePrec, commission: text, montant: operationDatas.montant.toString(), typeOP: operationDatas.typeOP });
                         }}
                     />
                 </View>
-
                 <View style={styles.inputContainer}>
                     <FontAwesome name="balance-scale" size={24} color="black" />
                     <Text style={styles.input}>Solde final: {soldeFinal.toString()}</Text>
                 </View>
             </ScrollView>
-
-
             <Button title="Ajouter" onPress={handleAddOperation} color="#841584" />
         </View>
-
     );
 };
 
@@ -206,6 +228,10 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    picker: {
+        height: 70,
+        width: '100%',
     },
     scrollContainer: {
         flex: 1,
@@ -223,22 +249,27 @@ const styles = StyleSheet.create({
     },
     inputContainer: {
         flexDirection: 'row',
-        //alignItems: 'center',
         marginBottom: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#ccc',
+        
     },
     input: {
         flex: 1,
+        marginTop: 10,
         marginLeft: 10,
-        paddingVertical: 10,
-        fontSize: 18,
+        fontSize: 20,
+        color: '#841584',
+        
     },
     buttonStyle: {
         flex: 1,
         marginLeft: 10,
         paddingVertical: 10,
         fontSize: 18,
+    },
+    pickerContainer: {
+        marginBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ccc',
     },
 });
 

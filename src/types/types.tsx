@@ -18,7 +18,7 @@ export type Client = {
   export type Operation = {
     id: number;
     clientId: string;
-    dateOP: Date;
+    dateOP: string;
     soldePrec:  number; 
     typeOP: 'depot' | 'retrait';
     montant: number;  
@@ -45,7 +45,7 @@ export type Client = {
     telephone1: string;
     typeOP: 'depot' | 'retrait';
     montant: number;
-    dateOP: Date;
+    dateOP: string;
     soldePrec:  number;  
     soldeFinal: number;
     commission: number;
@@ -56,6 +56,8 @@ export type Client = {
     commission: string;
     montant: string;
     typeOP: 'depot' | 'retrait';
+    clientId: string;
+    soldePrec: number;
 }
 
 
