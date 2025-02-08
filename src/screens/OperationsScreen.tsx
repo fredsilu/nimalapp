@@ -11,21 +11,29 @@ import { Ionicons } from '@expo/vector-icons'; // Ou votre bibliothèque d'icôn
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 
 
-
 function OperationsScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-
   const [operations, setOperations] = useState<Operation[]>([]);
   const [operationsClient, setOperationsClient] = useState<OperationswithClient[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredOperations, setFilteredOperations] = useState<OperationswithClient[]>([]);
+
   useEffect(() => {
-    fetchOperations();
-  }, []);
+    setFilteredOperations(
+      operationsClient.filter(op =>
+        op.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (op.postnom?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+        (op.prenom?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
+      )
+    );
+  }, [searchQuery, operationsClient]);
 
   const fetchOperations = async () => {
+    //console.log('fetchOperations', searchText, filter);
     if (loading || !hasMore) return;
     setLoading(true);
     try {
@@ -36,9 +44,8 @@ function OperationsScreen() {
       } else {
         setOperations([...operations, ...data]);
         setPage(page + 1);
-
         fetchClientNames(data);
-      } 
+      }
     } catch (error) {
       console.error('Error fetching operations:', error);
     } finally {
@@ -46,15 +53,9 @@ function OperationsScreen() {
     }
   };
 
-  const renderFooter = () => {
-    if (!loading) return null;
-
-    return (
-      <View style={{ paddingVertical: 20 }}>
-        <ActivityIndicator animating size="large" />
-      </View>
-    );
-  };
+  useEffect(() => {
+    fetchOperations();
+  }, []);
 
   const fetchClientNames = async (operations: Operation[]) => {
     const operationsWithClientNames: OperationswithClient[] = [];
@@ -82,29 +83,47 @@ function OperationsScreen() {
     }
     setOperationsClient(operationsWithClientNames);
   };
-/*
-  useEffect(() => {
-    const fetchOperations = async () => {
-      try {
-        const response = await api.fetchOperations();
-        const data = response;
-        fetchClientNames(data);
-      } catch (error) {
-        console.error('Error fetching operations:', error);
-      }
-    };
 
-    fetchOperations();
-  }, []); */
+  const handleAddOperation = () => {
+    navigation.navigate('AddOperation', { onGoBack: fetchOperations });
+  };
 
+
+  const renderFooter = () => {
+    if (!loading) return null;
+
+    return (
+      <View style={{ paddingVertical: 20 }}>
+        <ActivityIndicator animating size="large" />
+      </View>
+    );
+  };
+
+
+  const renderItem = ({ item, index }: { item: OperationswithClient; index: number }) => (
+    <TouchableOpacity
+      style={[styles.itemRow, index % 2 === 0 ? styles.itemRowEven : styles.itemRowOdd]}
+      onPress={() => navigation.navigate('ModifOperationScreen', { id: item.id })}
+    >
+      <Text style={styles.itemText}>{item.dateOP} </Text>
+      <Text style={styles.itemText}>{item.nom}</Text>
+      <Text style={styles.itemText}>{item.prenom}</Text>
+      <Text style={styles.itemText}>{item.telephone1}</Text>
+      <Text style={styles.itemText}>{formaterNombreSelonLocale(item.montant)} $</Text>
+      <Text style={styles.itemText}>{formaterNombreSelonLocale(item.soldePrec)} $</Text>
+      <Text style={styles.itemText}>{formaterNombreSelonLocale(item.commission)} %</Text>
+      <Text style={styles.itemText}>{formaterNombreSelonLocale(item.soldeFinal)} $</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
         <TextInput
-          placeholder="Rechercher..."
+          placeholder="Rechercher une opération..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
           style={{ borderWidth: 1, borderColor: '#ccc', padding: 10, flex: 1, marginRight: 10 }} />
-        <Button title="Filtrer" onPress={() => { }} />
       </View>
       <View style={{ flex: 1 }}>
         <ScrollView horizontal>
@@ -120,32 +139,18 @@ function OperationsScreen() {
               <Text style={styles.headerText}><Ionicons name="card-outline" size={16} color="white" /> Solde final</Text>
             </View>
             <FlatList
-              data={operationsClient}
+              data={filteredOperations}
               keyExtractor={(item) => item.id.toString()}
-              onEndReached={fetchOperations}
+              onEndReached={() => fetchOperations()}
               onEndReachedThreshold={0.5}
               ListFooterComponent={renderFooter}
-              renderItem={({ item, index }) => (
-                <TouchableOpacity
-                  style={[styles.itemRow, index % 2 === 0 ? styles.itemRowEven : styles.itemRowOdd]}
-                  onPress={() => navigation.navigate('ModifOperationScreen', { id: item.id })}
-                >
-                  <Text style={styles.itemText}>{item.dateOP} </Text>
-                  <Text style={styles.itemText}>{item.nom}</Text>
-                  <Text style={styles.itemText}>{item.prenom}</Text>
-                  <Text style={styles.itemText}>{item.telephone1}</Text>
-                  <Text style={styles.itemText}>{formaterNombreSelonLocale(item.montant)} $</Text>
-                  <Text style={styles.itemText}>{formaterNombreSelonLocale(item.soldePrec)} $</Text>
-                  <Text style={styles.itemText}>{formaterNombreSelonLocale(item.commission)} %</Text>
-                  <Text style={styles.itemText}>{formaterNombreSelonLocale(item.soldeFinal)} $</Text>
-                </TouchableOpacity>
-              )}
+              renderItem={renderItem}
             />
           </View>
         </ScrollView>
       </View>
 
-      <Button title="Ajouter une opération" onPress={() => navigation.navigate('AddOperation')} />
+      <Button title="Ajouter une opération" onPress={handleAddOperation} />
     </View>
   );
 }

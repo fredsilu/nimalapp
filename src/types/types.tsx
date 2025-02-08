@@ -30,10 +30,10 @@ export type Client = {
   Home: undefined;
   Details: { clientId: string };
   Operations: undefined;
-  AddClient: undefined;
+  AddOperation: { onGoBack: () => Promise<void> };
+  AddClient: { onGoBack: () => Promise<void> };
   EditClient: { clientId: string };
   ModifOperationScreen: { id: number };
-  AddOperation: undefined;
 }
 
 

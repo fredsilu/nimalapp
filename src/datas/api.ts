@@ -60,9 +60,15 @@ const api = {
     }
   },
 
-  fetchOperations: async (page:number): Promise<Operation[]> => {
+  fetchOperations: async (page: number = 1): Promise<Operation[]> => {
+    //console.log('fetchOperati', page);
     try {
-      const response = await axios.get<Operation[]>(API_BASE_URL + `operations?page=${page}&limit=100`);
+      const response = await axios.get<Operation[]>(API_BASE_URL + `operations`,{
+        params: {
+          page: page,
+          limit:50,
+        }
+      });
       return response.data;
     } catch (error) {
       console.log(error);
