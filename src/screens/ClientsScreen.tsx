@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Button, TextInput } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Button, TextInput, TouchableOpacity } from 'react-native';
 import { Client } from '../types/types';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/types';
@@ -14,13 +14,35 @@ const ClientsScreen = () => {
 
     useEffect(() => {
         setFilteredClients(
+            clients.filter(client => {
+                const query = searchQuery.toLowerCase();
+                const isNumericQuery = !isNaN(Number(searchQuery)); // Vérifie si la recherche est un nombre
+    
+                return isNumericQuery
+                    ? client.numeroCompte?.toString().includes(query) ||
+                      client.numeroCarte?.toString().includes(query) ||
+                      client.telephone1.toString().includes(query)
+                    : client.nom.toLowerCase().includes(query) ||
+                      (client.postnom?.toLowerCase().includes(query) || false) ||
+                      (client.prenom?.toLowerCase().includes(query) || false)
+            })
+        );
+    }, [searchQuery, clients]);
+    
+/*
+    useEffect(() => {
+        setFilteredClients(
             clients.filter(client =>
                 client.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (client.postnom?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-                (client.prenom?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
+                (client.prenom?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+                (client.numeroCompte?.toString().toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+                (client.numeroCarte?.toString().toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+                client.telephone1.toLowerCase().includes(searchQuery.toLowerCase())
             )
         );
     }, [searchQuery, clients]);
+    */
 
     const fetchClients = async () => {
         try {
@@ -40,11 +62,14 @@ const ClientsScreen = () => {
     };
 
     const renderItem = ({ item }: { item: Client }) => (
-        <View style={styles.item}>
-            <Text>{item.nom} {item.prenom}</Text>
-            <Text>Compte : {item.numeroCompte}</Text>
+        <TouchableOpacity style={styles.item} onPress={() => navigation.navigate('ClientDetailScreen', { clientId: item.id })}>
+            <Text>
+            {item.nom} {item.prenom}
+            </Text>
+            <Text>Numéro de Compte : {item.numeroCompte}</Text>
             <Text>Téléphone : {item.telephone1}</Text>
-        </View>
+            <Text>Numéro de carte : {item.numeroCarte}</Text>
+        </TouchableOpacity>
     );
 
     return (

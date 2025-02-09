@@ -4,7 +4,7 @@ import { Alert } from 'react-native';
 import { Client, Operation } from '../types/types';
 
 
-const API_BASE_URL = 'http://192.168.1.64/nimale/api/'; // URL de votre API
+const API_BASE_URL = 'http://127.0.0.1/nimale/api/'; // URL de votre API
 
 
 const api = {
@@ -67,6 +67,24 @@ const api = {
         params: {
           page: page,
           limit:50,
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  },
+
+  
+  fetchTodayOperations: async (today: boolean=true,page: number = 1): Promise<Operation[]> => {
+    //console.log('fetchOperati', page);
+    try {
+      const response = await axios.get<Operation[]>(API_BASE_URL + `operations`,{
+        params: {
+          page: page,
+          limit:50,
+          today: today,
         }
       });
       return response.data;

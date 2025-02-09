@@ -24,11 +24,19 @@ function OperationsScreen() {
 
   useEffect(() => {
     setFilteredOperations(
-      operationsClient.filter(op =>
-        op.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (op.postnom?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-        (op.prenom?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
-      )
+      operationsClient.filter(op => {
+        const query = searchQuery.toLowerCase();
+        const isNumericQuery = !isNaN(Number(searchQuery)); // Vérifie si la recherche est un nombre
+        
+        return isNumericQuery
+          ? op.montant?.toString().includes(query) ||
+          op.soldePrec?.toString().includes(query) ||
+          op.commission?.toString().includes(query) ||
+          op.soldeFinal?.toString().includes(query)
+          : op.nom.toLowerCase().includes(query) ||
+          (op.postnom?.toLowerCase().includes(query) || false) ||
+          (op.prenom?.toLowerCase().includes(query) || false)
+      })
     );
   }, [searchQuery, operationsClient]);
 
@@ -101,9 +109,8 @@ function OperationsScreen() {
 
 
   const renderItem = ({ item, index }: { item: OperationswithClient; index: number }) => (
-    <TouchableOpacity
+    <View
       style={[styles.itemRow, index % 2 === 0 ? styles.itemRowEven : styles.itemRowOdd]}
-      onPress={() => navigation.navigate('ModifOperationScreen', { id: item.id })}
     >
       <Text style={styles.itemText}>{item.dateOP} </Text>
       <Text style={styles.itemText}>{item.nom}</Text>
@@ -113,7 +120,7 @@ function OperationsScreen() {
       <Text style={styles.itemText}>{formaterNombreSelonLocale(item.soldePrec)} $</Text>
       <Text style={styles.itemText}>{formaterNombreSelonLocale(item.commission)} %</Text>
       <Text style={styles.itemText}>{formaterNombreSelonLocale(item.soldeFinal)} $</Text>
-    </TouchableOpacity>
+    </View>
   );
 
   return (
